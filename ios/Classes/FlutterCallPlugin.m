@@ -3,10 +3,6 @@
 
 @implementation FlutterCallPlugin
 + (void)registerWithRegistrar:(NSObject<FlutterPluginRegistrar>*)registrar {
-    if (@available(iOS 10.0, *)) {
-        [SwiftFlutterCallPlugin registerWithRegistrar:registrar];
-    } else {
-        // Fallback on earlier versions
-    }
+    [SwiftFlutterCallPlugin registerWithRegistrar:registrar];
 }
 @end

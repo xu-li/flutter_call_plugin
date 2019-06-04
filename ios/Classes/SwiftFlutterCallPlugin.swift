@@ -2,8 +2,8 @@ import Flutter
 import UIKit
 import CallKit
 import PushKit
+import AVFoundation
 
-@available(iOS 10.0, *)
 public class SwiftFlutterCallPlugin: NSObject, FlutterPlugin {
     public static func register(with registrar: FlutterPluginRegistrar) {
         let channel = FlutterMethodChannel(name: "plugins.flutter.io/flutter_call_plugin", binaryMessenger: registrar.messenger())
@@ -25,7 +25,7 @@ public class SwiftFlutterCallPlugin: NSObject, FlutterPlugin {
         
         super.init();
         
-        callManager.setPlugin(self);
+        callManager.setPlugin(self)
     }
     
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
@@ -130,6 +130,15 @@ public class SwiftFlutterCallPlugin: NSObject, FlutterPlugin {
     }
     
     public func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [AnyHashable : Any] = [:]) -> Bool {
+        // setup audio session
+        let session = AVAudioSession.sharedInstance()
+        do {
+            try session.setCategory(AVAudioSessionCategoryPlayAndRecord, mode: AVAudioSessionModeVoiceChat, options: [])
+        } catch (let error) {
+            print("Error while configuring audio session: \(error)")
+        }
+        
+        // setup push registry
         let registry:PKPushRegistry = PKPushRegistry(queue: DispatchQueue.main)
         registry.delegate = self
         registry.desiredPushTypes = [.voIP]
@@ -144,10 +153,10 @@ extension SwiftFlutterCallPlugin: PKPushRegistryDelegate {
     public func pushRegistry(_ registry: PKPushRegistry, didUpdate pushCredentials: PKPushCredentials, for type: PKPushType) {
         let token = pushCredentials.token.map { String(format: "%.2hhx", $0) }.joined()
         print("pushRegistry token: \(token)")
-        invokeMethod("onPushRegistryDelegate", arguments: ["token": token])
+        invokeMethod("onPKPushRegistryDelegate", arguments: ["token": token])
     }
     
     public func pushRegistry(_ registry: PKPushRegistry, didReceiveIncomingPushWith payload: PKPushPayload, for type: PKPushType) {
-        invokeMethod("onPushRegistryDelegate", arguments: ["payload": payload.dictionaryPayload])
+        invokeMethod("onPKPushRegistryDelegate", arguments: ["payload": payload.dictionaryPayload])
     }
 }

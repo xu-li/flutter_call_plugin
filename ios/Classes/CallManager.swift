@@ -1,18 +1,13 @@
 import Foundation
 import CallKit
-import AVFoundation
 
 /**
  * Class to manage call operations
  */
-@available(iOS 10.0, *)
 class CallManager: NSObject {
     
     private let callController: CXCallController = CXCallController()
     private let provider: CXProvider
-    
-    // callback handle
-    private var callbackHandle = Int64.zero
     
     // plugin
     private var plugin: SwiftFlutterCallPlugin?
@@ -80,33 +75,22 @@ class CallManager: NSObject {
         self.plugin = plugin
     }
     
-    func configureAudioSession() {
-        let session = AVAudioSession.sharedInstance()
-        do {
-            try session.setCategory(AVAudioSessionCategoryPlayAndRecord)
-            try session.setMode(AVAudioSessionModeVoiceChat)
-        } catch (let error) {
-            print("Error while configuring audio session: \(error)")
-        }
-    }
 }
 
-@available(iOS 10.0, *)
 extension CallManager: CXProviderDelegate {
     func providerDidReset(_ provider: CXProvider) {
-        plugin?.invokeMethod("onProviderDelegate", arguments: [
+        plugin?.invokeMethod("onCXProviderDelegate", arguments: [
             "action": "providerDidReset"
         ]);
     }
     
     func provider(_ provider: CXProvider, perform action: CXStartCallAction) {
-        configureAudioSession()
         provider.reportOutgoingCall(with: action.callUUID, connectedAt: nil)
         action.fulfill()
         
         currentCallUUID = action.callUUID
         
-        plugin?.invokeMethod("onProviderDelegate", arguments: [
+        plugin?.invokeMethod("onCXProviderDelegate", arguments: [
             "action": "StartCall",
             "uuid": action.callUUID.uuidString
         ]);
@@ -117,27 +101,19 @@ extension CallManager: CXProviderDelegate {
         
         currentCallUUID = nil
         
-        plugin?.invokeMethod("onProviderDelegate", arguments: [
+        plugin?.invokeMethod("onCXProviderDelegate", arguments: [
             "action": "EndCall",
             "uuid": action.callUUID.uuidString
         ]);
     }
     
     func provider(_ provider: CXProvider, perform action: CXAnswerCallAction) {
-        configureAudioSession()
         action.fulfill()
         
-        plugin?.invokeMethod("onProviderDelegate", arguments: [
+        plugin?.invokeMethod("onCXProviderDelegate", arguments: [
             "action": "AnswerCall",
             "uuid": action.callUUID.uuidString
         ]);
     }
 
-}
-
-@available(iOS 10.0, *)
-extension CallManager: CXCallObserverDelegate {
-    func callObserver(_ callObserver: CXCallObserver, callChanged call: CXCall) {
-        
-    }
 }

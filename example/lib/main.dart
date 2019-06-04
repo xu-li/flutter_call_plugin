@@ -23,7 +23,7 @@ class MyAppState extends State<MyApp> {
     FlutterCallPlugin.initialize((MethodCall call) {
       print("OnCallCallback: " + call.method + ", arguments: " + jsonEncode(call.arguments));
 
-      if (call.method == "onProviderDelegate") {
+      if (call.method == "onCXProviderDelegate") {
         if (call.arguments['action'] == 'AnswerCall') {
           setState(() {
             uuid = call.arguments['uuid'];
