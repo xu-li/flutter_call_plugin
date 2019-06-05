@@ -14,12 +14,21 @@ public class SwiftFlutterCallPlugin: NSObject, FlutterPlugin {
         registrar.addApplicationDelegate(instance)
     }
     
+    // CallManager instance
     private let callManager: CallManager
     
+    // Whether it has been initialized or not
     private var initialized: Bool = false
+    
+    // The MethodChannel
     private var channel: FlutterMethodChannel?
+    
+    // Any pending calls
     private var pendingMethodCalls: [Dictionary<String, Any>] = []
 
+    /**
+     Init
+    */
     public override init() {
         callManager = CallManager()
         
@@ -28,6 +37,9 @@ public class SwiftFlutterCallPlugin: NSObject, FlutterPlugin {
         callManager.setPlugin(self)
     }
     
+    /**
+     Main method to handle all the Flutter calls
+    */
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         switch call.method {
         case "initialize":
@@ -43,6 +55,9 @@ public class SwiftFlutterCallPlugin: NSObject, FlutterPlugin {
         }
     }
     
+    /**
+     Handle the flutter call "initialize"
+    */
     func initialize(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         if !initialized {
             initialized = true
@@ -57,6 +72,9 @@ public class SwiftFlutterCallPlugin: NSObject, FlutterPlugin {
         result(true);
     }
     
+    /**
+     Handle the flutter call "makeCall"
+     */
     func makeCall(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         if let args = call.arguments as? [String: String] {
             if args.keys.contains("handle") {
@@ -76,6 +94,9 @@ public class SwiftFlutterCallPlugin: NSObject, FlutterPlugin {
         }
     }
     
+    /**
+     Handle the flutter call "endCall"
+     */
     func endCall(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         if let uuidString = call.arguments as? String {
             let uuid = UUID(uuidString: uuidString);
@@ -95,6 +116,9 @@ public class SwiftFlutterCallPlugin: NSObject, FlutterPlugin {
         }
     }
     
+    /**
+     Handle the flutter call "reportIncomingCall"
+     */
     func reportIncomingCall(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         if let args = call.arguments as? [String: String] {
             if args.keys.contains("handle") {
@@ -114,11 +138,17 @@ public class SwiftFlutterCallPlugin: NSObject, FlutterPlugin {
         }
     }
     
+    /**
+     Set channel
+    */
     func setChannel(_ channel: FlutterMethodChannel) {
         self.channel = channel
     }
     
-    public func invokeMethod(_ method: String, arguments: Any?) {
+    /**
+     invokeMethod
+     */
+    public func invokeMethod(_ method: String, arguments: Any? = []) {
         if initialized {
             channel?.invokeMethod(method, arguments: arguments)
         } else {
@@ -129,6 +159,12 @@ public class SwiftFlutterCallPlugin: NSObject, FlutterPlugin {
         }
     }
     
+    /**
+     ApplicationDelegate
+     
+     1. setup audio session
+     2. setup push registry
+     */
     public func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [AnyHashable : Any] = [:]) -> Bool {
         // setup audio session
         let session = AVAudioSession.sharedInstance()
@@ -148,15 +184,17 @@ public class SwiftFlutterCallPlugin: NSObject, FlutterPlugin {
 }
 
 
-@available(iOS 10.0, *)
 extension SwiftFlutterCallPlugin: PKPushRegistryDelegate {
     public func pushRegistry(_ registry: PKPushRegistry, didUpdate pushCredentials: PKPushCredentials, for type: PKPushType) {
         let token = pushCredentials.token.map { String(format: "%.2hhx", $0) }.joined()
-        print("pushRegistry token: \(token)")
-        invokeMethod("onPKPushRegistryDelegate", arguments: ["token": token])
+        invokeMethod("onPushRegistryCredentialsUpdated", arguments: ["token": token, "type": type.rawValue])
+    }
+    
+    public func pushRegistry(_ registry: PKPushRegistry, didInvalidatePushTokenFor type: PKPushType) {
+        invokeMethod("onPushRegistryCredentialsUpdated", arguments: ["token": "", "type": type.rawValue])
     }
     
     public func pushRegistry(_ registry: PKPushRegistry, didReceiveIncomingPushWith payload: PKPushPayload, for type: PKPushType) {
-        invokeMethod("onPKPushRegistryDelegate", arguments: ["payload": payload.dictionaryPayload])
+        invokeMethod("onPushRegistryPushReceived", arguments: ["payload": payload.dictionaryPayload, "type": type.rawValue])
     }
 }

@@ -8,7 +8,12 @@
 import Foundation
 import CallKit
 
-@available(iOS 10.0, *)
+enum ContactType: String {
+    case generic = "GENERIC"
+    case phoneNumber = "PHONE_NUMBER"
+    case emailAddress = "EMAIL_ADDRESS"
+}
+
 class Contact {
     let uuid: UUID
     let handle: String
@@ -36,11 +41,11 @@ class Contact {
         }
         
         if let type = contact["type"] {
-            if type == "GENERIC" {
+            if type == ContactType.generic.rawValue {
                 self.type = .generic
-            } else if type == "PHONE_NUMBER" {
+            } else if type == ContactType.phoneNumber.rawValue {
                 self.type = .phoneNumber
-            } else if type == "EMAIL_ADDRESS" {
+            } else if type == ContactType.emailAddress.rawValue {
                 self.type = .emailAddress
             } else {
                 self.type = .generic

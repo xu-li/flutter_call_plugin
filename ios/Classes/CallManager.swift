@@ -1,5 +1,6 @@
 import Foundation
 import CallKit
+import AVFoundation
 
 /**
  * Class to manage call operations
@@ -12,12 +13,11 @@ class CallManager: NSObject {
     // plugin
     private var plugin: SwiftFlutterCallPlugin?
     
-    private var currentCallUUID: UUID?
-    
     override init() {
         // CXProviderConfiguration
         let appName = Bundle.main.infoDictionary![kCFBundleNameKey as String] as! String
         let providerConfiguration = CXProviderConfiguration(localizedName: appName)
+        providerConfiguration.supportsVideo = true
         providerConfiguration.maximumCallGroups = 1
         providerConfiguration.maximumCallsPerCallGroup = 1
         providerConfiguration.supportedHandleTypes = [.generic, .phoneNumber, .emailAddress]
@@ -32,25 +32,26 @@ class CallManager: NSObject {
         provider.setDelegate(self, queue: nil)
     }
     
-    
-    func setRingtone(ringtone: String) {
-        provider.configuration.ringtoneSound = ringtone
-    }
-    
-    func makeCall(_ contact: Contact, completion: ((UUID, Error?) -> Void)? = nil) {
+    /**
+     Make a call
+     */
+    func makeCall(_ contact: Contact, video: Bool = false, completion: ((UUID, Error?) -> Void)? = nil) {
         let startCallAction = CXStartCallAction(
             call: contact.uuid,
             handle: CXHandle(type: contact.type, value: contact.handle)
         );
         
         startCallAction.contactIdentifier = contact.identifier;
-        startCallAction.isVideo = false;
+        startCallAction.isVideo = video;
         
         callController.request(CXTransaction(action: startCallAction)) { error in
             completion?(contact.uuid, error);
         };
     }
     
+    /**
+     End a call
+    */
     func endCall(uuid: UUID, completion: ((Error?) -> Void)? = nil) {
         let endCallAction = CXEndCallAction(call: uuid);
         callController.request(CXTransaction(action: endCallAction)) { error in
@@ -58,12 +59,15 @@ class CallManager: NSObject {
         };
     }
     
-    func reportIncomingCall(_ contact: Contact, completion: ((NSError?) -> Void)?) {
+    /**
+     Report a incoming call
+    */
+    func reportIncomingCall(_ contact: Contact, video: Bool = false, completion: ((NSError?) -> Void)?) {
         // prepare update to send to system
         let update = CXCallUpdate()
         // add call metadata
         update.remoteHandle = CXHandle(type: contact.type, value: contact.handle)
-        update.hasVideo = false
+        update.hasVideo = video
         
         // use provider to notify system
         provider.reportNewIncomingCall(with: contact.uuid, update: update) { error in
@@ -71,49 +75,54 @@ class CallManager: NSObject {
         }
     }
     
+    /**
+     Set plugin
+    */
     func setPlugin(_ plugin: SwiftFlutterCallPlugin) {
         self.plugin = plugin
     }
-    
 }
 
 extension CallManager: CXProviderDelegate {
+    func providerDidBegin(_ provider: CXProvider) {
+        plugin?.invokeMethod("onCallProviderBegan")
+    }
+    
     func providerDidReset(_ provider: CXProvider) {
-        plugin?.invokeMethod("onCXProviderDelegate", arguments: [
-            "action": "providerDidReset"
-        ]);
+        plugin?.invokeMethod("onCallProviderReset")
+    }
+    
+    func provider(_ provider: CXProvider, didActivate audioSession: AVAudioSession) {
+        plugin?.invokeMethod("onAudioSessionActivated")
+    }
+    
+    func provider(_ provider: CXProvider, didDeactivate audioSession: AVAudioSession) {
+        plugin?.invokeMethod("onAudioSessionDeactivated")
     }
     
     func provider(_ provider: CXProvider, perform action: CXStartCallAction) {
         provider.reportOutgoingCall(with: action.callUUID, connectedAt: nil)
         action.fulfill()
         
-        currentCallUUID = action.callUUID
-        
-        plugin?.invokeMethod("onCXProviderDelegate", arguments: [
-            "action": "StartCall",
-            "uuid": action.callUUID.uuidString
-        ]);
-    }
-    
-    func provider(_ provider: CXProvider, perform action: CXEndCallAction) {
-        action.fulfill()
-        
-        currentCallUUID = nil
-        
-        plugin?.invokeMethod("onCXProviderDelegate", arguments: [
-            "action": "EndCall",
-            "uuid": action.callUUID.uuidString
-        ]);
+        plugin?.invokeMethod("onCallStarted", arguments: ["uuid": action.callUUID.uuidString])
     }
     
     func provider(_ provider: CXProvider, perform action: CXAnswerCallAction) {
         action.fulfill()
         
-        plugin?.invokeMethod("onCXProviderDelegate", arguments: [
-            "action": "AnswerCall",
-            "uuid": action.callUUID.uuidString
-        ]);
+        plugin?.invokeMethod("onCallAnswered", arguments: ["uuid": action.callUUID.uuidString])
+    }
+    
+    func provider(_ provider: CXProvider, perform action: CXEndCallAction) {
+        action.fulfill()
+        
+        plugin?.invokeMethod("onCallEnded", arguments: ["uuid": action.callUUID.uuidString])
+    }
+    
+    func provider(_ provider: CXProvider, timedOutPerforming action: CXAction) {
+        action.fulfill()
+        
+        plugin?.invokeMethod("onCallTimedOut")
     }
 
 }

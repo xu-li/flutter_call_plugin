@@ -23,15 +23,13 @@ class MyAppState extends State<MyApp> {
     FlutterCallPlugin.initialize((MethodCall call) {
       print("OnCallCallback: " + call.method + ", arguments: " + jsonEncode(call.arguments));
 
-      if (call.method == "onCXProviderDelegate") {
-        if (call.arguments['action'] == 'AnswerCall') {
-          setState(() {
-            uuid = call.arguments['uuid'];
-          });
-        }
+      if (call.method == "onCallAnswered") {
+        setState(() {
+          uuid = call.arguments['uuid'];
+        });
       }
     }).then((result) {
-      print("Initialized!");
+      print("Flutter Call Plugin has been initialized!");
     });
   }
 
