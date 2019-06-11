@@ -7,29 +7,59 @@ import AVFoundation
  */
 class CallManager: NSObject {
     
+    public let provider: CXProvider
     private let callController: CXCallController = CXCallController()
-    private let provider: CXProvider
     
     // plugin
     private var plugin: SwiftFlutterCallPlugin?
     
     override init() {
-        // CXProviderConfiguration
-        let appName = Bundle.main.infoDictionary![kCFBundleNameKey as String] as! String
-        let providerConfiguration = CXProviderConfiguration(localizedName: appName)
-        providerConfiguration.supportsVideo = true
-        providerConfiguration.maximumCallGroups = 1
-        providerConfiguration.maximumCallsPerCallGroup = 1
-        providerConfiguration.supportedHandleTypes = [.generic, .phoneNumber, .emailAddress]
-        
         // CXProvider
-        provider = CXProvider(configuration: providerConfiguration)
+        provider = CXProvider(configuration: CallManager.buildConfiguration([:]))
         
         // init parent
         super.init()
         
         // set delegate
         provider.setDelegate(self, queue: nil)
+    }
+    
+    static func buildConfiguration(_ config:[String: String]) -> CXProviderConfiguration {
+        var configuration: CXProviderConfiguration
+        
+        // check appName
+        if let appName = config["appName"] {
+            configuration = CXProviderConfiguration(localizedName: appName)
+        } else {
+            let defaultName = Bundle.main.infoDictionary![kCFBundleNameKey as String] as! String
+            configuration = CXProviderConfiguration(localizedName: defaultName)
+        }
+        
+        // check ringtone
+        if let ringtone = config["ringtone"] {
+            configuration.ringtoneSound = ringtone
+        }
+        
+        // check icon
+        if let icon = config["icon"] {
+            if let url = Bundle.main.url(forResource: icon, withExtension: "") {
+                print("URL: \(url)")
+            }
+            
+            if let path = Bundle.main.path(forResource: icon, ofType: "") {
+                if let iconImage = UIImage(contentsOfFile: path) {
+                    configuration.iconTemplateImageData = UIImagePNGRepresentation(iconImage)
+                }
+            }
+        }
+        
+        // defaults
+        configuration.supportsVideo = true
+        configuration.maximumCallGroups = 1
+        configuration.maximumCallsPerCallGroup = 1
+        configuration.supportedHandleTypes = [.generic, .phoneNumber, .emailAddress]
+        
+        return configuration
     }
     
     /**

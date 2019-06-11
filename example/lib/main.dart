@@ -20,13 +20,23 @@ class MyAppState extends State<MyApp> {
   void initState() {
     super.initState();
 
-    FlutterCallPlugin.initialize((MethodCall call) {
+    var config = {
+      "appName": "Flutter Call Plugin",
+      "icon": "images/logo.png"
+    };
+
+    FlutterCallPlugin.initialize(config, (call) {
       print("OnCallCallback: " + call.method + ", arguments: " + jsonEncode(call.arguments));
 
       if (call.method == "onCallAnswered") {
         setState(() {
           uuid = call.arguments['uuid'];
         });
+
+      } else if (call.method == 'onPushRegistryPushReceived' && call.arguments['type'] == 'PKPushTypeVoIP') {
+
+        // assuming we can get the handle from payload.aps.alert.handle
+        FlutterCallPlugin.reportIncomingCall(call.arguments['payload']['aps']['alert']['handle']);
       }
     }).then((result) {
       print("Flutter Call Plugin has been initialized!");
@@ -61,6 +71,10 @@ class MyAppState extends State<MyApp> {
                 child: Text("End a call"),
                 onPressed: uuid.length == 0 ? null : () {
                   FlutterCallPlugin.endCall(uuid).then((result) {
+                    setState(() {
+                      this.uuid = "";
+                    });
+                  }).catchError(() {
                     setState(() {
                       this.uuid = "";
                     });

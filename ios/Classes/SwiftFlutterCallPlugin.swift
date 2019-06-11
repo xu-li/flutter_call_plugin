@@ -62,6 +62,12 @@ public class SwiftFlutterCallPlugin: NSObject, FlutterPlugin {
         if !initialized {
             initialized = true
             
+            // setup configurations
+            if let args = call.arguments as? [String: String] {
+                callManager.provider.configuration = CallManager.buildConfiguration(args)
+            }
+            
+            // invoke pending method calls
             if pendingMethodCalls.count > 0 {
                 for call in pendingMethodCalls {
                     invokeMethod(call["method"] as! String, arguments: call["arguments"])

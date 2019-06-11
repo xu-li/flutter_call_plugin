@@ -7,10 +7,10 @@ class FlutterCallPlugin {
   static const MethodChannel _channel = const MethodChannel('plugins.flutter.io/flutter_call_plugin');
 
   // initialize
-  static Future<bool> initialize(void Function(MethodCall) callback) async {
+  static Future<bool> initialize(config, void Function(MethodCall) callback) async {
     _channel.setMethodCallHandler(callback);
 
-    return await _channel.invokeMethod("initialize");
+    return await _channel.invokeMethod("initialize", config);
   }
 
   /// Make a call
