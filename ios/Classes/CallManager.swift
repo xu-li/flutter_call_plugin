@@ -15,7 +15,7 @@ class CallManager: NSObject {
     
     override init() {
         // CXProvider
-        provider = CXProvider(configuration: CallManager.buildConfiguration([:]))
+        provider = CXProvider(configuration: CallManager.buildConfiguration([:], with: nil))
         
         // init parent
         super.init()
@@ -24,7 +24,7 @@ class CallManager: NSObject {
         provider.setDelegate(self, queue: nil)
     }
     
-    static func buildConfiguration(_ config:[String: String]) -> CXProviderConfiguration {
+    static func buildConfiguration(_ config:[String: String], with registrar: FlutterPluginRegistrar?) -> CXProviderConfiguration {
         var configuration: CXProviderConfiguration
         
         // check appName
@@ -37,19 +37,14 @@ class CallManager: NSObject {
         
         // check ringtone
         if let ringtone = config["ringtone"] {
-            configuration.ringtoneSound = ringtone
+            configuration.ringtoneSound = registrar?.lookupKey(forAsset: ringtone)
         }
         
         // check icon
         if let icon = config["icon"] {
-            if let url = Bundle.main.url(forResource: icon, withExtension: "") {
-                print("URL: \(url)")
-            }
-            
-            if let path = Bundle.main.path(forResource: icon, ofType: "") {
-                if let iconImage = UIImage(contentsOfFile: path) {
-                    configuration.iconTemplateImageData = UIImagePNGRepresentation(iconImage)
-                }
+            let key = registrar?.lookupKey(forAsset: icon)
+            if let path = Bundle.main.path(forResource: key, ofType: ""), let iconImage = UIImage(contentsOfFile: path) {
+                configuration.iconTemplateImageData = UIImagePNGRepresentation(iconImage)
             }
         }
         
@@ -83,10 +78,10 @@ class CallManager: NSObject {
      End a call
     */
     func endCall(uuid: UUID, completion: ((Error?) -> Void)? = nil) {
-        let endCallAction = CXEndCallAction(call: uuid);
+        let endCallAction = CXEndCallAction(call: uuid)
         callController.request(CXTransaction(action: endCallAction)) { error in
             completion?(error);
-        };
+        }
     }
     
     /**

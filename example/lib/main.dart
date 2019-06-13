@@ -22,7 +22,8 @@ class MyAppState extends State<MyApp> {
 
     var config = {
       "appName": "Flutter Call Plugin",
-      "icon": "images/logo.png"
+      "icon": "assets/images/logo.png",
+      "ringtone": "assets/ringtone.mp3"
     };
 
     FlutterCallPlugin.initialize(config, (call) {
@@ -74,7 +75,7 @@ class MyAppState extends State<MyApp> {
                     setState(() {
                       this.uuid = "";
                     });
-                  }).catchError(() {
+                  }).catchError((error) {
                     setState(() {
                       this.uuid = "";
                     });

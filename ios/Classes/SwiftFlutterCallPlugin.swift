@@ -9,6 +9,7 @@ public class SwiftFlutterCallPlugin: NSObject, FlutterPlugin {
         let channel = FlutterMethodChannel(name: "plugins.flutter.io/flutter_call_plugin", binaryMessenger: registrar.messenger())
         let instance = SwiftFlutterCallPlugin()
         instance.setChannel(channel)
+        instance.setRegistrar(registrar)
         
         registrar.addMethodCallDelegate(instance, channel: channel)
         registrar.addApplicationDelegate(instance)
@@ -22,6 +23,8 @@ public class SwiftFlutterCallPlugin: NSObject, FlutterPlugin {
     
     // The MethodChannel
     private var channel: FlutterMethodChannel?
+    
+    public var registrar: FlutterPluginRegistrar?
     
     // Any pending calls
     private var pendingMethodCalls: [Dictionary<String, Any>] = []
@@ -64,7 +67,7 @@ public class SwiftFlutterCallPlugin: NSObject, FlutterPlugin {
             
             // setup configurations
             if let args = call.arguments as? [String: String] {
-                callManager.provider.configuration = CallManager.buildConfiguration(args)
+                callManager.provider.configuration = CallManager.buildConfiguration(args, with: registrar!)
             }
             
             // invoke pending method calls
@@ -146,9 +149,16 @@ public class SwiftFlutterCallPlugin: NSObject, FlutterPlugin {
     
     /**
      Set channel
-    */
+     */
     func setChannel(_ channel: FlutterMethodChannel) {
         self.channel = channel
+    }
+    
+    /**
+     Set registrar
+     */
+    func setRegistrar(_ registrar: FlutterPluginRegistrar) {
+        self.registrar = registrar
     }
     
     /**
